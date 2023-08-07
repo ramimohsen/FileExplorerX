@@ -67,7 +67,9 @@ public final class TreeFileStrucutre {
 
     public static void buildFileSystemTree(DefaultTreeModel treeModel, DefaultMutableTreeNode parent, File directory) {
         File[] files = directory.listFiles();
-        if (files == null) return;
+        if (files == null) {
+            return;
+        }
 
         for (File file : files) {
             DefaultMutableTreeNode node = new DefaultMutableTreeNode(file.getAbsolutePath());

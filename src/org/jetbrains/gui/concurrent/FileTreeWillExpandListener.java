@@ -1,4 +1,4 @@
-package org.jetbrains.gui;
+package org.jetbrains.gui.concurrent;
 
 import java.io.File;
 import javax.swing.JTree;
@@ -12,7 +12,7 @@ import javax.swing.tree.ExpandVetoException;
  *
  * @author ramy-mohsen
  */
-class FileTreeWillExpandListener implements TreeWillExpandListener {
+public class FileTreeWillExpandListener implements TreeWillExpandListener {
 
     @Override
     public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {

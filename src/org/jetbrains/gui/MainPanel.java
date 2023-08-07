@@ -18,7 +18,6 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPFile;
 import org.jetbrains.enums.FileType;
 import org.jetbrains.file.AbstractFileReader;
 import org.jetbrains.file.FTPConnection;
@@ -27,7 +26,9 @@ import org.jetbrains.file.TextFileReader;
 import org.jetbrains.file.TreeFileStrucutre;
 import org.jetbrains.file.ZIPFileReader;
 import org.jetbrains.gui.concurrent.FTPConnectionWorker;
+import org.jetbrains.gui.concurrent.FTPTreeWillExpandListener;
 import org.jetbrains.gui.concurrent.FilePreviewWorker;
+import org.jetbrains.gui.concurrent.FileTreeWillExpandListener;
 
 /**
  *
@@ -100,6 +101,7 @@ public class MainPanel extends javax.swing.JFrame {
 
         imagePreviewLabel.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true));
 
+        zipFileTree.setFont(new java.awt.Font("Liberation Sans", 0, 18)); // NOI18N
         zipFileTree.setModel(null);
         zipFileTree.setToolTipText("Archived Files Tree");
         zipFileTree.addTreeSelectionListener(new javax.swing.event.TreeSelectionListener() {
@@ -122,6 +124,7 @@ public class MainPanel extends javax.swing.JFrame {
         textAreaFilePreview.setBorder(null);
         jScrollPane1.setViewportView(textAreaFilePreview);
 
+        localFIleTree.setFont(new java.awt.Font("Liberation Sans", 0, 18)); // NOI18N
         localFIleTree.addTreeSelectionListener(new javax.swing.event.TreeSelectionListener() {
             public void valueChanged(javax.swing.event.TreeSelectionEvent evt) {
                 localFIleTreeValueChanged(evt);
@@ -154,6 +157,7 @@ public class MainPanel extends javax.swing.JFrame {
             }
         });
 
+        ftpTree.setFont(new java.awt.Font("Liberation Sans", 0, 18)); // NOI18N
         ftpTree.setModel(null);
         jScrollPane4.setViewportView(ftpTree);
 
@@ -385,18 +389,20 @@ public class MainPanel extends javax.swing.JFrame {
 
         FTPConnectionWorker worker = new FTPConnectionWorker(server, Integer.parseInt(port),
                 username, password);
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("ftp://" + server + ":" + port);
 
         worker.addPropertyChangeListener(event -> {
 
             if (SwingWorker.StateValue.DONE.equals(event.getNewValue())) {
                 try {
                     FTPClient result = worker.get();
-                    DefaultMutableTreeNode root = new DefaultMutableTreeNode("ftp://" + server + ":" + port);
-                    for (FTPFile file : result.listFiles()) {
-                        DefaultMutableTreeNode fileNode = new DefaultMutableTreeNode(file.getName());
-                        root.add(fileNode);
-                    }
+
                     DefaultTreeModel treeModel = new DefaultTreeModel(root);
+                    FTPTreeWillExpandListener fTPTreeWillExpandListener = new FTPTreeWillExpandListener(result);
+                    fTPTreeWillExpandListener.buildFTPSystemTree(treeModel, root, "/");
+
+                    ftpTree.addTreeWillExpandListener(fTPTreeWillExpandListener);
+
                     ftpTree.setModel(treeModel);
                     setAppStatusText(String.format("Connected to server: %s on port: %s", server, port));
                     connectButton.setEnabled(false);
