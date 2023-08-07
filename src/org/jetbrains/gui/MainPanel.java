@@ -6,7 +6,6 @@ import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
@@ -18,10 +17,8 @@ import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
-import org.apache.commons.net.ftp.FTPReply;
 import org.jetbrains.enums.FileType;
 import org.jetbrains.file.AbstractFileReader;
 import org.jetbrains.file.FTPConnection;
@@ -151,6 +148,11 @@ public class MainPanel extends javax.swing.JFrame {
         disconnectButton.setText("Disconnect");
         disconnectButton.setToolTipText("Disconnect from server");
         disconnectButton.setEnabled(false);
+        disconnectButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                disconnectButtonMouseClicked(evt);
+            }
+        });
 
         ftpTree.setModel(null);
         jScrollPane4.setViewportView(ftpTree);
@@ -461,6 +463,19 @@ public class MainPanel extends javax.swing.JFrame {
             worker.execute();
         }
     }//GEN-LAST:event_archivedMenuActionPerformed
+
+    private void disconnectButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_disconnectButtonMouseClicked
+
+        try {
+            FTPConnection.getInstance().disconnect();
+            setAppStatusText("Disconnected from server.");
+            disconnectButton.setEnabled(false);
+            connectButton.setEnabled(true);
+            ftpTree.setModel(null);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error while disconnecting local file system. " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_disconnectButtonMouseClicked
 
     private void setAppStatusText(String message) {
         this.statusLabel.setText(message);
