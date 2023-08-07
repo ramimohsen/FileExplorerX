@@ -307,6 +307,9 @@
               <Connection code="null" type="code"/>
             </Property>
           </Properties>
+          <Events>
+            <EventHandler event="valueChanged" listener="javax.swing.event.TreeSelectionListener" parameters="javax.swing.event.TreeSelectionEvent" handler="ftpTreeValueChanged"/>
+          </Events>
         </Component>
       </SubComponents>
     </Container>

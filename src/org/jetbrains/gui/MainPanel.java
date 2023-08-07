@@ -22,10 +22,12 @@ import org.jetbrains.enums.FileType;
 import org.jetbrains.file.AbstractFileReader;
 import org.jetbrains.file.FTPConnection;
 import org.jetbrains.file.ImageFileReader;
+import org.jetbrains.file.RemoteFTPFileReader;
 import org.jetbrains.file.TextFileReader;
 import org.jetbrains.file.TreeFileStrucutre;
 import org.jetbrains.file.ZIPFileReader;
 import org.jetbrains.gui.concurrent.FTPConnectionWorker;
+import org.jetbrains.gui.concurrent.FTPFilePreviewWorker;
 import org.jetbrains.gui.concurrent.FTPTreeWillExpandListener;
 import org.jetbrains.gui.concurrent.FilePreviewWorker;
 import org.jetbrains.gui.concurrent.FileTreeWillExpandListener;
@@ -159,6 +161,11 @@ public class MainPanel extends javax.swing.JFrame {
 
         ftpTree.setFont(new java.awt.Font("Liberation Sans", 0, 18)); // NOI18N
         ftpTree.setModel(null);
+        ftpTree.addTreeSelectionListener(new javax.swing.event.TreeSelectionListener() {
+            public void valueChanged(javax.swing.event.TreeSelectionEvent evt) {
+                ftpTreeValueChanged(evt);
+            }
+        });
         jScrollPane4.setViewportView(ftpTree);
 
         jMenu3.setText("File");
@@ -366,7 +373,6 @@ public class MainPanel extends javax.swing.JFrame {
                             }
                         }
                     } catch (InterruptedException | ExecutionException e) {
-                        Logger.getLogger(MainPanel.class.getName()).log(Level.SEVERE, null, e);
                         JOptionPane.showMessageDialog(MainPanel.this, "Error while reading file content :" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
@@ -482,6 +488,44 @@ public class MainPanel extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Error while disconnecting local file system. " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_disconnectButtonMouseClicked
+
+    private void ftpTreeValueChanged(javax.swing.event.TreeSelectionEvent evt) {//GEN-FIRST:event_ftpTreeValueChanged
+
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) ftpTree.getLastSelectedPathComponent();
+        if (selectedNode != null && selectedNode.isLeaf()) {
+            final String selectedEntry = (String) selectedNode.getUserObject();
+
+            FTPFilePreviewWorker worker = new FTPFilePreviewWorker(FTPConnection.getInstance().getFtpClient(), selectedEntry);
+            worker.execute();
+
+            worker.addPropertyChangeListener(event -> {
+
+                if (SwingWorker.StateValue.DONE.equals(event.getNewValue())) {
+                    try {
+                        Object result = worker.get();
+                        if (result != null) {
+                            if (result instanceof String) {
+                                String fileContent = (String) result;
+                                setAppStatusText(String.format("File Selected: %s ", selectedEntry));
+                                textAreaFilePreview.setText(fileContent);
+                                imagePreviewLabel.setIcon(null);
+                            } else if (result instanceof ImageIcon) {
+                                ImageIcon imageFile = (ImageIcon) result;
+                                Image image = imageFile
+                                        .getImage()
+                                        .getScaledInstance(imagePreviewLabel.getWidth(), imagePreviewLabel.getHeight(), Image.SCALE_SMOOTH);
+                                setAppStatusText(String.format("File Selected: %s ", selectedEntry));
+                                imagePreviewLabel.setIcon(new ImageIcon(image));
+                                imagePreviewLabel.setText("");
+                            }
+                        }
+                    } catch (InterruptedException | ExecutionException e) {
+                        JOptionPane.showMessageDialog(MainPanel.this, "Error while reading file content :" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            });
+        }
+    }//GEN-LAST:event_ftpTreeValueChanged
 
     private void setAppStatusText(String message) {
         this.statusLabel.setText(message);
