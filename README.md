@@ -14,5 +14,30 @@ ZIP archive handling: Seamlessly navigate and view the contents of ZIP archives 
 
 File Preview: Preview text and image files directly within the application, enhancing productivity.
 
-User-friendly GUI: The graphical user interface ensures a smooth and enjoyable user experience.
-Lightweight and efficient: FileExplorerX is designed to be resource-efficient and responsive.
+## Technologies Used
+
+- Java 11
+- Swing (Java GUI toolkit)
+- Java ZIP archive API
+- Apache Commons Net library for FTP support
+
+## Getting Started
+
+### Prerequisites
+
+To run the application locally, you'll need the following:
+
+- JDK 11 (Java Development Kit)
+- NetBeans Apache Project (or any other Java IDE of your choice)
+
+### How to Run
+
+1. Clone the repository to your local machine.
+2. Open the project in NetBeans (or your preferred Java IDE).
+3. Build and run the project.
+
+## Code Overview
+
+### Lazy Loading with Background Threads
+
+The application utilizes background threads to implement lazy loading of files in the tree. This approach ensures a smooth user experience even when dealing with large file systems or remote FTP servers.
