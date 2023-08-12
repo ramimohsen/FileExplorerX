@@ -5,6 +5,13 @@ import org.jetbrains.utility.FileChooserWrapper;
 import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -13,6 +20,7 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -22,7 +30,6 @@ import org.jetbrains.enums.FileType;
 import org.jetbrains.file.AbstractFileReader;
 import org.jetbrains.file.FTPConnection;
 import org.jetbrains.file.ImageFileReader;
-import org.jetbrains.file.RemoteFTPFileReader;
 import org.jetbrains.file.TextFileReader;
 import org.jetbrains.file.TreeFileStrucutre;
 import org.jetbrains.file.ZIPFileReader;
@@ -378,6 +385,52 @@ public class MainPanel extends javax.swing.JFrame {
                 }
             });
         }
+
+        if (selectedNode != null && !selectedNode.isLeaf()) {
+
+            final String selectedEntry = (String) selectedNode.getUserObject();
+
+            SwingWorker<Void, Void> watchWorker = new SwingWorker<>() {
+
+                @Override
+                protected Void doInBackground() {
+                    try (WatchService activeWatchService = FileSystems.getDefault().newWatchService();) {
+
+                        Path pathToWatch = Paths.get(selectedEntry);
+                        pathToWatch.register(activeWatchService, StandardWatchEventKinds.ENTRY_CREATE,
+                                StandardWatchEventKinds.ENTRY_DELETE,
+                                StandardWatchEventKinds.ENTRY_MODIFY);
+
+                        WatchKey key;
+                        while ((key = activeWatchService.take()) != null) {
+                            for (WatchEvent<?> event : key.pollEvents()) {
+                                SwingUtilities.invokeLater(() -> {
+                                    DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) selectedNode.getParent();
+                                    if (parentNode != null) {
+                                        int selectedIndex = parentNode.getIndex(selectedNode);
+                                        File selectedDir = new File(selectedEntry);
+                                        DefaultTreeModel treeModel = (DefaultTreeModel) localFIleTree.getModel();
+                                        DefaultMutableTreeNode updatedNode = new DefaultMutableTreeNode(selectedDir.getPath());
+                                        TreeFileStrucutre.buildFileSystemTree(treeModel, updatedNode, selectedDir);
+                                        treeModel.removeNodeFromParent(selectedNode);
+                                        treeModel.insertNodeInto(updatedNode, parentNode, selectedIndex);
+                                        treeModel.reload(parentNode);
+                                    }
+                                });
+                            }
+                            key.reset();
+                        }
+                    } catch (InterruptedException | IOException ex) {
+                        JOptionPane.showMessageDialog(MainPanel.this, "File not found or you do not have access permission:" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+
+                    return null;
+                }
+            };
+
+            watchWorker.execute();
+
+        }
     }//GEN-LAST:event_localFIleTreeValueChanged
 
     private void connectButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_connectButtonMouseClicked
@@ -534,12 +587,12 @@ public class MainPanel extends javax.swing.JFrame {
     private void initializeFileSystemTree() {
 
         DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Local File System");
+        DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
         localFIleTree.addTreeWillExpandListener(new FileTreeWillExpandListener());
 
         SwingWorker<DefaultTreeModel, Void> worker = new SwingWorker<>() {
             @Override
             protected DefaultTreeModel doInBackground() {
-                DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
                 File file = new File("/");
                 TreeFileStrucutre.buildFileSystemTree(treeModel, rootNode, file);
                 return treeModel;
@@ -558,6 +611,7 @@ public class MainPanel extends javax.swing.JFrame {
 
         worker.execute();
     }
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenu aboutMenu;
