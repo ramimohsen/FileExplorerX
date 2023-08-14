@@ -34,5 +34,4 @@ public class TextFileReader extends AbstractFileReader<String> {
     public static boolean isTextFile(String fileName) {
         return fileName.endsWith(FileType.TXT.getExtension());
     }
-
 }

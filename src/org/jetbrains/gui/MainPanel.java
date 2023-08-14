@@ -28,7 +28,7 @@ import javax.swing.tree.DefaultTreeModel;
 import org.apache.commons.net.ftp.FTPClient;
 import org.jetbrains.enums.FileType;
 import org.jetbrains.file.AbstractFileReader;
-import org.jetbrains.file.FTPConnection;
+import org.jetbrains.file.remote.FTPConnection;
 import org.jetbrains.file.ImageFileReader;
 import org.jetbrains.file.TextFileReader;
 import org.jetbrains.file.TreeFileStrucutre;
@@ -36,7 +36,7 @@ import org.jetbrains.file.ZIPFileReader;
 import org.jetbrains.gui.concurrent.FTPConnectionWorker;
 import org.jetbrains.gui.concurrent.FTPFilePreviewWorker;
 import org.jetbrains.gui.concurrent.FTPTreeWillExpandListener;
-import org.jetbrains.gui.concurrent.FilePreviewWorker;
+import org.jetbrains.gui.concurrent.LocalFilePreviewWorker;
 import org.jetbrains.gui.concurrent.FileTreeWillExpandListener;
 
 /**
@@ -44,14 +44,14 @@ import org.jetbrains.gui.concurrent.FileTreeWillExpandListener;
  * @author ramy-mohsen
  */
 public class MainPanel extends javax.swing.JFrame {
-
+    
     public MainPanel() {
         initComponents();
         initializeFileSystemTree();
     }
-
+    
     public static void main(String args[]) {
-
+        
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Metal".equals(info.getName())) {
@@ -62,14 +62,14 @@ public class MainPanel extends javax.swing.JFrame {
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(MainPanel.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-
+        
         java.awt.EventQueue.invokeLater(() -> {
             MainPanel main = new MainPanel();
             main.setLocationRelativeTo(null);
             main.setVisible(true);
         });
     }
-
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -290,19 +290,19 @@ public class MainPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_aboutMenuMouseClicked
 
     private void zipFileTreeValueChanged(javax.swing.event.TreeSelectionEvent evt) {//GEN-FIRST:event_zipFileTreeValueChanged
-
+        
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) zipFileTree.getLastSelectedPathComponent();
-
+        
         if (selectedNode != null && selectedNode.isLeaf()) {
-
+            
             SwingWorker<Object, Void> worker = new SwingWorker<Object, Void>() {
-
+                
                 private final ZipEntry selectedEntry = (ZipEntry) selectedNode.getUserObject();
-
+                
                 @Override
                 protected Object doInBackground() throws Exception {
                     DefaultMutableTreeNode rootNode = (DefaultMutableTreeNode) zipFileTree.getModel().getRoot();
-
+                    
                     if (TextFileReader.isTextFile(selectedEntry.getName())) {
                         return ZIPFileReader.readZiPTextFileContent(rootNode.getUserObject().toString(), selectedEntry);
                     } else if (ImageFileReader.isImageFile(selectedEntry.getName())) {
@@ -310,10 +310,10 @@ public class MainPanel extends javax.swing.JFrame {
                     } else {
                         JOptionPane.showMessageDialog(MainPanel.this, "Text and Image Files Only Can Be Previewed", "Not Supported", JOptionPane.WARNING_MESSAGE);
                     }
-
+                    
                     return null;
                 }
-
+                
                 @Override
                 protected void done() {
                     try {
@@ -340,67 +340,68 @@ public class MainPanel extends javax.swing.JFrame {
                     }
                 }
             };
-
+            
             worker.execute();
-
+            
         }
 
     }//GEN-LAST:event_zipFileTreeValueChanged
 
     private void localFIleTreeValueChanged(javax.swing.event.TreeSelectionEvent evt) {//GEN-FIRST:event_localFIleTreeValueChanged
-
+        
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) localFIleTree.getLastSelectedPathComponent();
-
+        
         if (selectedNode != null && selectedNode.isLeaf()) {
-
+            
             final String selectedEntry = (String) selectedNode.getUserObject();
-
-            FilePreviewWorker worker = new FilePreviewWorker(selectedEntry);
+            
+            LocalFilePreviewWorker worker = new LocalFilePreviewWorker(selectedEntry);
             worker.execute();
-
+            
             worker.addPropertyChangeListener(event -> {
-
+                
                 if (SwingWorker.StateValue.DONE.equals(event.getNewValue())) {
+                    
                     try {
-                        Object result = worker.get();
-                        if (result != null) {
-                            if (result instanceof String) {
-                                String fileContent = (String) result;
-                                setAppStatusText(String.format("File Selected: %s ", selectedEntry));
-                                textAreaFilePreview.setText(fileContent);
-                                imagePreviewLabel.setIcon(null);
-                            } else if (result instanceof ImageIcon) {
-                                ImageIcon imageFile = (ImageIcon) result;
-                                Image image = imageFile
-                                        .getImage()
-                                        .getScaledInstance(imagePreviewLabel.getWidth(), imagePreviewLabel.getHeight(), Image.SCALE_SMOOTH);
-                                setAppStatusText(String.format("File Selected: %s ", selectedEntry));
-                                imagePreviewLabel.setIcon(new ImageIcon(image));
-                                imagePreviewLabel.setText("");
-                            }
+                        AbstractFileReader<?> result = worker.get();
+                        
+                        if (result instanceof TextFileReader) {
+                            TextFileReader textFileReader = (TextFileReader) result;
+                            String fileContent = textFileReader.readFile();
+                            setAppStatusText(String.format("File Selected: %s ", selectedEntry));
+                            setPreviewContent(fileContent, null);
+                        } else if (result instanceof ImageFileReader) {
+                            ImageFileReader imageFileReader = (ImageFileReader) result;
+                            ImageIcon imageFile = imageFileReader.readFile();
+                            Image image = imageFile
+                                    .getImage()
+                                    .getScaledInstance(imagePreviewLabel.getWidth(), imagePreviewLabel.getHeight(), Image.SCALE_SMOOTH);
+                            setAppStatusText(String.format("File Selected: %s ", selectedEntry));
+                            setPreviewContent("", new ImageIcon(image));
                         }
-                    } catch (InterruptedException | ExecutionException e) {
+                        
+                    } catch (InterruptedException | ExecutionException | IOException e) {
                         JOptionPane.showMessageDialog(MainPanel.this, "Error while reading file content :" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             });
         }
-
+        
         if (selectedNode != null && !selectedNode.isLeaf()) {
-
+            
             final String selectedEntry = (String) selectedNode.getUserObject();
-
+            
             SwingWorker<Void, Void> watchWorker = new SwingWorker<>() {
-
+                
                 @Override
                 protected Void doInBackground() {
                     try (WatchService activeWatchService = FileSystems.getDefault().newWatchService();) {
-
+                        
                         Path pathToWatch = Paths.get(selectedEntry);
                         pathToWatch.register(activeWatchService, StandardWatchEventKinds.ENTRY_CREATE,
                                 StandardWatchEventKinds.ENTRY_DELETE,
                                 StandardWatchEventKinds.ENTRY_MODIFY);
-
+                        
                         WatchKey key;
                         while ((key = activeWatchService.take()) != null) {
                             for (WatchEvent<?> event : key.pollEvents()) {
@@ -423,45 +424,45 @@ public class MainPanel extends javax.swing.JFrame {
                     } catch (InterruptedException | IOException ex) {
                         JOptionPane.showMessageDialog(MainPanel.this, "File not found or you do not have access permission:" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
-
+                    
                     return null;
                 }
             };
-
+            
             watchWorker.execute();
-
+            
         }
     }//GEN-LAST:event_localFIleTreeValueChanged
 
     private void connectButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_connectButtonMouseClicked
-
+        
         String server = serverText.getText().trim();
         String port = portNumber.getValue().toString();
         String username = usernameText.getText().trim();
         char[] passwordChars = passwordText.getPassword();
         String password = new String(passwordChars);
-
+        
         if (server.isEmpty() || port.isEmpty() || username.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(null, "All fields are required. Please fill in all the details.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+        
         FTPConnectionWorker worker = new FTPConnectionWorker(server, Integer.parseInt(port),
                 username, password);
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("ftp://" + server + ":" + port);
-
+        
         worker.addPropertyChangeListener(event -> {
-
+            
             if (SwingWorker.StateValue.DONE.equals(event.getNewValue())) {
                 try {
                     FTPClient result = worker.get();
-
+                    
                     DefaultTreeModel treeModel = new DefaultTreeModel(root);
                     FTPTreeWillExpandListener fTPTreeWillExpandListener = new FTPTreeWillExpandListener(result);
                     fTPTreeWillExpandListener.buildFTPSystemTree(treeModel, root, "/");
-
+                    
                     ftpTree.addTreeWillExpandListener(fTPTreeWillExpandListener);
-
+                    
                     ftpTree.setModel(treeModel);
                     setAppStatusText(String.format("Connected to server: %s on port: %s", server, port));
                     connectButton.setEnabled(false);
@@ -479,35 +480,35 @@ public class MainPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_exitMenuActionPerformed
 
     private void archivedMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_archivedMenuActionPerformed
-
+        
         List<FileNameExtensionFilter> fileFilters = new ArrayList<>() {
             {
                 add(new FileNameExtensionFilter("ZIP Files", FileType.ZIP.name().toLowerCase()));
             }
         };
-
+        
         File selectedFile = new FileChooserWrapper("Select ZIP file", fileFilters).getSelectedFile(this);
-
+        
         if (selectedFile != null) {
-
+            
             SwingWorker<DefaultTreeModel, DefaultTreeModel> worker = new SwingWorker<DefaultTreeModel, DefaultTreeModel>() {
-
+                
                 @Override
                 protected DefaultTreeModel doInBackground() throws Exception {
-
+                    
                     AbstractFileReader<?> fileReader;
                     String fileName = selectedFile.getName().toLowerCase();
-
+                    
                     if (ZIPFileReader.isZipFile(fileName)) {
                         fileReader = new ZIPFileReader(selectedFile);
                         return (DefaultTreeModel) fileReader.readFile();
                     } else {
                         JOptionPane.showMessageDialog(MainPanel.this, "You can only select Zip File", "Error", JOptionPane.ERROR_MESSAGE);
                     }
-
+                    
                     return null;
                 }
-
+                
                 @Override
                 protected void done() {
                     try {
@@ -520,17 +521,17 @@ public class MainPanel extends javax.swing.JFrame {
                         Logger.getLogger(MainPanel.class.getName()).log(Level.SEVERE, null, ex);
                         JOptionPane.showMessageDialog(MainPanel.this, "Error while reading zip file content", "Error", JOptionPane.ERROR_MESSAGE);
                     }
-
+                    
                 }
-
+                
             };
-
+            
             worker.execute();
         }
     }//GEN-LAST:event_archivedMenuActionPerformed
 
     private void disconnectButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_disconnectButtonMouseClicked
-
+        
         try {
             FTPConnection.getInstance().disconnect();
             setAppStatusText("Disconnected from server.");
@@ -543,16 +544,16 @@ public class MainPanel extends javax.swing.JFrame {
     }//GEN-LAST:event_disconnectButtonMouseClicked
 
     private void ftpTreeValueChanged(javax.swing.event.TreeSelectionEvent evt) {//GEN-FIRST:event_ftpTreeValueChanged
-
+        
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) ftpTree.getLastSelectedPathComponent();
         if (selectedNode != null && selectedNode.isLeaf()) {
             final String selectedEntry = (String) selectedNode.getUserObject();
-
+            
             FTPFilePreviewWorker worker = new FTPFilePreviewWorker(FTPConnection.getInstance().getFtpClient(), selectedEntry);
             worker.execute();
-
+            
             worker.addPropertyChangeListener(event -> {
-
+                
                 if (SwingWorker.StateValue.DONE.equals(event.getNewValue())) {
                     try {
                         Object result = worker.get();
@@ -579,17 +580,23 @@ public class MainPanel extends javax.swing.JFrame {
             });
         }
     }//GEN-LAST:event_ftpTreeValueChanged
-
+    
     private void setAppStatusText(String message) {
         this.statusLabel.setText(message);
     }
-
+    
+    private void setPreviewContent(String text, ImageIcon image) {
+        imagePreviewLabel.setIcon(image);
+        textAreaFilePreview.setText(text);
+        
+    }
+    
     private void initializeFileSystemTree() {
-
+        
         DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Local File System");
         DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
         localFIleTree.addTreeWillExpandListener(new FileTreeWillExpandListener());
-
+        
         SwingWorker<DefaultTreeModel, Void> worker = new SwingWorker<>() {
             @Override
             protected DefaultTreeModel doInBackground() {
@@ -597,7 +604,7 @@ public class MainPanel extends javax.swing.JFrame {
                 TreeFileStrucutre.buildFileSystemTree(treeModel, rootNode, file);
                 return treeModel;
             }
-
+            
             @Override
             protected void done() {
                 try {
@@ -608,7 +615,7 @@ public class MainPanel extends javax.swing.JFrame {
                 }
             }
         };
-
+        
         worker.execute();
     }
 

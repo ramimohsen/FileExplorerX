@@ -1,4 +1,4 @@
-package org.jetbrains.file;
+package org.jetbrains.file.remote;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;

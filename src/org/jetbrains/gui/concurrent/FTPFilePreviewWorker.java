@@ -4,7 +4,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
 import org.apache.commons.net.ftp.FTPClient;
 import org.jetbrains.file.ImageFileReader;
-import org.jetbrains.file.RemoteFTPFileReader;
+import org.jetbrains.file.remote.RemoteFTPFileReader;
 import org.jetbrains.file.TextFileReader;
 
 /**

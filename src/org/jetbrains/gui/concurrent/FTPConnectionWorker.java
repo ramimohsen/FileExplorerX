@@ -2,7 +2,7 @@ package org.jetbrains.gui.concurrent;
 
 import javax.swing.SwingWorker;
 import org.apache.commons.net.ftp.FTPClient;
-import org.jetbrains.file.FTPConnection;
+import org.jetbrains.file.remote.FTPConnection;
 
 /**
  *

@@ -1,4 +1,4 @@
-package org.jetbrains.file;
+package org.jetbrains.file.remote;
 
 import java.io.IOException;
 import org.apache.commons.net.ftp.FTP;
